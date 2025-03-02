@@ -1,6 +1,9 @@
+// TODO: add more secure nonce generation possibly (feels weak right now)
+
 use crate::common::{Encryption, Keys};
 use aes_gcm::{aead::Aead, Aes256Gcm, Key, KeyInit, Nonce};
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
+use tokio::time::{timeout, Duration}; // for the timeout fn()
 
 /// Handles encrypted P2P communication asynchronously.
 pub struct P2psConnAsync<T: AsyncRead + AsyncWrite + Unpin + Send> {
@@ -25,7 +28,8 @@ where
         let cipher = Aes256Gcm::new(&self.key);
         cipher
             .decrypt(Nonce::from_slice(nonce), encrypted_data)
-            .expect("decryption failed")
+            // TODO: improve the error handling for this below
+            .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidData, "Decryption fail"))?
     }
 }
 
@@ -102,4 +106,16 @@ impl<T: AsyncRead + AsyncWrite + Unpin + Send> P2psConnAsync<T> {
 
         Ok(data)
     }
+    // timeout fn()
+    pub async fn read_with_timeout(&mut self) -> std::io::Result<Vec<u8>> {
+        timeout(Duration::from_secs(5), self.read()).await?
+    }
+    // wait on and check later and if it is in the right file
+    fn generate_nonce() -> [u8; 12] {
+        let mut nonce = [0u8; 12];
+        rand::thread_rng().fill_bytes(&mut nonce);
+        nonce
+    }
+
+
 }

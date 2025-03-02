@@ -1,8 +1,14 @@
+/*
+fixed nonce is insecure (fix)
+deserailize keys for persistent storage
+*/
+
 use aes_gcm::{Aes256Gcm, Key};
 use hkdf::Hkdf;
 use sha2::Sha256;
 use std::io;
 use x25519_dalek::{EphemeralSecret, PublicKey};
+use serde::{Serialize, Deserialize}; // for the storage
 
 pub(crate) trait Encryption {
     fn encrypt(&self, input_data: &[u8]) -> (Vec<u8>, [u8; 12]);
@@ -39,4 +45,10 @@ impl Keys {
     pub(crate) fn get_public_key_bytes(&self) -> [u8; 32] {
         *self.public.as_bytes()
     }
+
+    #[derive(Serialize, Deserialize)]
+    pub struct StoredKeys {
+    secret: [u8; 32],
+    public: [u8; 32],
+}
 }
